@@ -7,6 +7,7 @@ const {connectWhatsApp,shutdown}=require("./connection/whatsapp");
 const RuntimeGuard=require("./lib/runtime-guard");
 const RuntimeSafety=require("./lib/runtime-safety");
 const HealthServer=require("./lib/health-server");
+const {loadPlugins}=require("./lib/plugin-loader");
 let stopping=false;
 let dbHealthTimer=null, runtimeTimer=null;
 let runtimeGuard, runtimeSafety, healthServer;
@@ -14,6 +15,7 @@ let runtimeGuard, runtimeSafety, healthServer;
 async function start(){
   config.loadConfig();
   banner(config);
+  loadPlugins();
 
   runtimeGuard=new RuntimeGuard({config,state:require("./lib/state"),logger:{warn,error,log}});
   runtimeSafety=new RuntimeSafety({state:require("./lib/state"),logger:{warn,error,log}});
