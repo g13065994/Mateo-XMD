@@ -1,0 +1,1 @@
+module.exports={name:'ping',aliases:['p'],category:'general',description:'Check bot responsiveness.',async execute({sock,message}){const started=Date.now();await sock.sendMessage(message.key.remoteJid,{text:'Pong!'}, {quoted:message});return Date.now()-started}};
