@@ -1,1 +1,49 @@
-const r=new Map(),a=new Map();const n=x=>String(x||"").trim().toLowerCase();function register(p){if(!p?.name||typeof p.execute!=="function")throw Error("Plugin requires name and execute()");const name=n(p.name);if(r.has(name))throw Error(`Duplicate plugin: ${name}`);const x={...p,name,aliases:(p.aliases||[]).map(n)};r.set(name,x);for(const al of x.aliases){if(a.has(al)||r.has(al))throw Error(`Duplicate alias: ${al}`);a.set(al,name)}return x}function resolve(x){x=n(x);return r.get(a.get(x)||x)||null}function list(){return[...r.values()].map(x=>({name:x.name,aliases:x.aliases,category:x.category||"general"}))}module.exports={register,resolve,list,clear:()=>{r.clear();a.clear()}};
+const registry = new Map();
+const aliases = new Map();
+
+function normalizeName(name) {
+  return String(name || "").trim().toLowerCase();
+}
+
+function register(plugin) {
+  if (!plugin || !plugin.name || typeof plugin.execute !== "function") {
+    throw new Error("Plugin requires name and execute().");
+  }
+
+  const name = normalizeName(plugin.name);
+  registry.set(name, plugin);
+
+  for (const alias of plugin.aliases || []) {
+    const key = normalizeName(alias);
+    if (key) aliases.set(key, name);
+  }
+
+  return plugin;
+}
+
+function get(name) {
+  const key = normalizeName(name);
+  const targetName = registry.has(key) ? key : aliases.get(key);
+  if (!targetName) return null;
+  return registry.get(targetName) || null;
+}
+
+function list() {
+  return [...registry.values()].map((plugin) => ({
+    name: plugin.name,
+    aliases: plugin.aliases || [],
+    category: plugin.category || "general",
+    description: plugin.description || "",
+  }));
+}
+
+function has(name) {
+  return !!get(name);
+}
+
+function clear() {
+  registry.clear();
+  aliases.clear();
+}
+
+module.exports = { register, get, list, has, clear };

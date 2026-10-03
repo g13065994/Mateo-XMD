@@ -1,1 +1,16 @@
-const state=require('../../lib/state');module.exports={name:'uptime',aliases:['up'],category:'general',description:'Show bot uptime.',async execute({sock,message}){const ms=Date.now()-(state.getState().startedAt||Date.now());const s=Math.floor(ms/1000),d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),sec=s%60;await sock.sendMessage(message.key.remoteJid,{text:`Uptime: ${d}d ${h}h ${m}m ${sec}s`},{quoted:message})}};
+const state = require("../../lib/state");
+
+module.exports = {
+  name: "uptime",
+  aliases: ["up"],
+  category: "general",
+  description: "Show how long the bot has been running.",
+  async execute({ sock, message }) {
+    const uptimeMs = Date.now() - state.getState().startedAt;
+    const seconds = Math.floor(uptimeMs / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const text = `*Uptime:* ${hours}h ${minutes % 60}m ${seconds % 60}s`;
+    await sock.sendMessage(message.key.remoteJid, { text }, { quoted: message });
+  },
+};
