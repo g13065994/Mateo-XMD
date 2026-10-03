@@ -1,1 +1,18 @@
-const {getGroupFeature,warnUser}=require("./moderation");function inspect({jid,sender,text}){const s=String(text||"");if(getGroupFeature(jid,"antiLink",false)&&/(https?:\/\/|www\.|chat\.whatsapp\.com\/)/i.test(s))return{violation:"link",action:getGroupFeature(jid,"antiLinkAction","warn"),warning:warnUser(sender,"blocked_link")};const letters=s.replace(/[^A-Za-z]/g,"");if(getGroupFeature(jid,"antiCaps",false)&&letters.length>=12&&letters.replace(/[^A-Z]/g,"").length/letters.length>=.85)return{violation:"caps",action:getGroupFeature(jid,"antiCapsAction","warn"),warning:warnUser(sender,"excessive_caps")};const words=getGroupFeature(jid,"blockedWords",[]);if(Array.isArray(words)&&words.some(w=>w&&s.toLowerCase().includes(String(w).toLowerCase())))return{violation:"blocked_word",action:getGroupFeature(jid,"blockedWordAction","warn"),warning:warnUser(sender,"blocked_word")};return{violation:null}}module.exports={inspect};
+const { getGroupFeature, warnUser } = require("./moderation");
+
+function inspect({ jid, sender, text = "" }) {
+  const groupJid = String(jid || "");
+  const raw = String(text || "");
+
+  if (!groupJid || !sender) return { allowed: true, reason: "missing_context" };
+  if (!getGroupFeature(groupJid, "antiLink", false)) return { allowed: true, reason: "feature_disabled" };
+
+  if (/(https?:\/\/|www\.|chat\.whatsapp\.com|wa\.me)/i.test(raw)) {
+    warnUser(sender, "shared external link", 3);
+    return { allowed: false, reason: "external_link_detected", action: "warn" };
+  }
+
+  return { allowed: true, reason: "ok" };
+}
+
+module.exports = { inspect };

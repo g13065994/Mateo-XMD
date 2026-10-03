@@ -1,1 +1,86 @@
-const db=require("./database");function ensureUser(id){return db.getUser(id)||db.upsertUser(id,{warnings:0,banned:false})}function warnUser(id,reason="",limit=3){const u=ensureUser(id),warnings=Number(u.warnings||0)+1,banned=warnings>=limit;return db.upsertUser(id,{warnings,banned:banned||u.banned,banReason:banned?reason:u.banReason,lastWarning:{reason,at:Date.now()}})}function setUserBan(id,banned,reason=""){return db.upsertUser(id,{banned:Boolean(banned),banReason:banned?reason:""})}function clearWarnings(id){return db.upsertUser(id,{warnings:0})}function setGroupFeature(id,k,v){const g=db.getGroup(id)||{};return db.upsertGroup(id,{settings:{...(g.settings||{}),[k]:v}})}function getGroupFeature(id,k,f=false){return db.getGroup(id)?.settings?.[k]??f}function isBanned(id){return Boolean(db.getUser(id)?.banned)}module.exports={ensureUser,warnUser,setUserBan,clearWarnings,setGroupFeature,getGroupFeature,isBanned};
+const db = require("./database");
+
+function normalizeId(id) {
+  return String(id || "").trim();
+}
+
+function ensureUser(id) {
+  const clean = normalizeId(id);
+  if (!clean) return null;
+  return db.getUser(clean) || db.upsertUser(clean, { warnings: 0, banned: false, role: "member" });
+}
+
+function ensureGroup(jid) {
+  const clean = normalizeId(jid);
+  if (!clean) return null;
+  return db.getGroup(clean) || db.upsertGroup(clean, {
+    id: clean,
+    features: { antiSpam: true, antiLink: false, antiMention: false },
+    settings: {},
+  });
+}
+
+function getGroupFeature(jid, key, fallback = false) {
+  const group = ensureGroup(jid);
+  if (!group || !group.features) return fallback;
+  return group.features[key] ?? fallback;
+}
+
+function setGroupFeature(jid, key, value) {
+  const group = ensureGroup(jid);
+  if (!group) return false;
+  group.features = group.features || {};
+  group.features[key] = Boolean(value);
+  db.upsertGroup(jid, group);
+  return true;
+}
+
+function warnUser(id, reason = "", limit = 3) {
+  const user = ensureUser(id);
+  if (!user) return { warnings: 0, banned: false, limit, reason, reachedLimit: false };
+  user.warnings = Number(user.warnings || 0) + 1;
+  user.reason = reason;
+  user.banned = user.warnings >= limit;
+  db.upsertUser(id, user);
+  return {
+    warnings: user.warnings,
+    banned: user.banned,
+    limit,
+    reason,
+    reachedLimit: user.warnings >= limit,
+  };
+}
+
+function banUser(id, reason = "") {
+  const user = ensureUser(id);
+  if (!user) return { success: false, reason };
+  user.banned = true;
+  user.reason = reason || "banned by moderation";
+  db.upsertUser(id, user);
+  return { success: true, reason: user.reason };
+}
+
+function unbanUser(id) {
+  const user = ensureUser(id);
+  if (!user) return false;
+  user.banned = false;
+  user.reason = "";
+  db.upsertUser(id, user);
+  return true;
+}
+
+function getUserWarnings(id) {
+  const user = ensureUser(id);
+  return user ? Number(user.warnings || 0) : 0;
+}
+
+module.exports = {
+  ensureUser,
+  ensureGroup,
+  getGroupFeature,
+  setGroupFeature,
+  warnUser,
+  banUser,
+  unbanUser,
+  getUserWarnings,
+};

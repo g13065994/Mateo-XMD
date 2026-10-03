@@ -1,1 +1,35 @@
-const config=require("../config");const num=x=>String(x||"").replace(/\D/g,"");function isOwnerJid(j){return config.ownerNumbers.some(o=>num(o)===num(String(j).split("@")[0]))}function getPermissionContext(ctx,m={}){const p=m.participants||[],u=p.find(x=>x.id===ctx.sender),b=p.find(x=>x.id===m.botJid),admin=x=>x?.admin==="admin"||x?.admin==="superadmin"||x?.isAdmin;return{isOwner:ctx.isOwner||isOwnerJid(ctx.sender),isAdmin:admin(u),botIsAdmin:admin(b)}}function allowed(p,c,perm){if(p.ownerOnly&&!perm.isOwner)return{ok:false,reason:"owner"};if(p.groupOnly&&!c.isGroup)return{ok:false,reason:"group"};if(p.privateOnly&&c.isGroup)return{ok:false,reason:"private"};if(p.adminOnly&&!perm.isAdmin&&!perm.isOwner)return{ok:false,reason:"admin"};if(p.botAdmin&&!perm.botIsAdmin)return{ok:false,reason:"bot_admin"};return{ok:true}}module.exports={isOwnerJid,getPermissionContext,allowed};
+const config = require("../config");
+
+function normalizeNum(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function isOwnerJid(jid) {
+  const user = normalizeNum(jid?.split("@")[0] || jid);
+  return config.ownerNumbers.some((entry) => normalizeNum(entry) === user);
+}
+
+function isAdminJid(jid, admins = []) {
+  const user = normalizeNum(jid?.split("@")[0] || jid);
+  return admins.some((entry) => normalizeNum(entry) === user);
+}
+
+function getPermissionLevel({ jid, admins = [] }) {
+  if (isOwnerJid(jid)) return "owner";
+  if (isAdminJid(jid, admins)) return "admin";
+  return "member";
+}
+
+function canRunCommand({ jid, required = "member", admins = [] }) {
+  const level = getPermissionLevel({ jid, admins });
+  const order = { member: 1, admin: 2, owner: 3 };
+  return (order[level] || 0) >= (order[required] || 0);
+}
+
+module.exports = {
+  normalizeNum,
+  isOwnerJid,
+  isAdminJid,
+  getPermissionLevel,
+  canRunCommand,
+};

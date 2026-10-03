@@ -31,6 +31,14 @@ const config = {
   mediaDir: String(c.mediaDir || path.join(root, "data", "media")),
   logLevel: String(c.logLevel || "info"),
   healthPort: Number(c.healthPort || 0),
+  ownerNumbers: Array.isArray(c.ownerNumbers) ? c.ownerNumbers : [],
+  moderation: {
+    maxWarnings: Number(c.moderation?.maxWarnings || 3),
+    antiSpamWindowMs: Number(c.moderation?.antiSpamWindowMs || 10000),
+    antiSpamLimit: Number(c.moderation?.antiSpamLimit || 5),
+    antiLink: Boolean(c.moderation?.antiLink ?? false),
+    antiSpam: Boolean(c.moderation?.antiSpam ?? true),
+  },
   database: {
     type: String(db.type || "sqlite").toLowerCase(),
     sqlite: db.sqlite || { file: path.join(root, "data", "mateo.sqlite") },

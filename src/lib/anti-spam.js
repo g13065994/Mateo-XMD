@@ -1,1 +1,37 @@
-const {getGroupFeature,warnUser}=require("./moderation");const buckets=new Map();function inspect({jid,sender,text=""}){if(!getGroupFeature(jid,"antiSpam",false))return{allowed:true};const now=Date.now(),cfg={window:Number(getGroupFeature(jid,"antiSpamWindowMs",10000)),max:Number(getGroupFeature(jid,"antiSpamMaxMessages",6)),dup:Number(getGroupFeature(jid,"antiSpamDuplicateLimit",3))},k=`${jid}:${sender}`,e=buckets.get(k)||{t:[],x:[]};e.t=e.t.filter(t=>now-t<cfg.window);e.t.push(now);const x=String(text).trim().toLowerCase();if(x)e.x=[...e.x.slice(-(cfg.dup-1)),x];const duplicate=x&&e.x.filter(v=>v===x).length>=cfg.dup,flood=e.t.length>cfg.max;buckets.set(k,e);if(flood||duplicate)return{allowed:false,reason:flood?"message_flood":"duplicate_messages",warning:warnUser(sender,flood?"message_flood":"duplicate_messages",Number(getGroupFeature(jid,"warningLimit",3)))};return{allowed:true}}module.exports={inspect,clear:()=>buckets.clear()};
+const { getGroupFeature, warnUser } = require("./moderation");
+
+const buckets = new Map();
+
+function getBucketKey(sender, jid) {
+  return `${String(jid || "unknown")}::${String(sender || "unknown")}`;
+}
+
+function inspect({ jid, sender, text = "" }) {
+  const groupJid = String(jid || "");
+  const user = String(sender || "");
+
+  if (!groupJid || !user) return { allowed: true, reason: "missing_context" };
+  if (!getGroupFeature(groupJid, "antiSpam", true)) return { allowed: true, reason: "feature_disabled" };
+
+  const payload = String(text || "");
+  const now = Date.now();
+  const key = getBucketKey(user, groupJid);
+  const bucket = buckets.get(key) || [];
+  const recent = bucket.filter((ts) => now - ts < 10000);
+  recent.push(now);
+  buckets.set(key, recent);
+
+  if (recent.length > 5) {
+    warnUser(user, "spamming / message flood", 3);
+    return { allowed: false, reason: "spam_detected", action: "warn" };
+  }
+
+  if (payload.length > 3000) {
+    warnUser(user, "oversized message", 3);
+    return { allowed: false, reason: "oversized_message", action: "warn" };
+  }
+
+  return { allowed: true, reason: "ok" };
+}
+
+module.exports = { inspect };
