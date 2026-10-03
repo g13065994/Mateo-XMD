@@ -1,1 +1,34 @@
-const util=require("util");const levels={silent:0,error:1,warn:2,info:3,debug:4};const level=levels[require("../config").logLevel]??3;function write(l,a){if(levels[l]>level)return;const s=`[${new Date().toISOString()}] [${l.toUpperCase()}] ${a.map(x=>x instanceof Error?x.stack||x.message:typeof x==="string"?x:util.inspect(x,{depth:4,colors:false})).join(" ")}`;(l==="error"?console.error:l==="warn"?console.warn:console.log)(s)}function log(...a){write("info",a)}function warn(...a){write("warn",a)}function error(...a){write("error",a)}function debug(...a){write("debug",a)}function banner(c){console.log(`\n╔══════════════════════════════════════╗\n║  ${String(c.name).padEnd(34)}║\n║  Core 1.0.0                          ║\n║  WhatsApp automation engine          ║\n╚══════════════════════════════════════╝\n`)}module.exports={log,warn,error,debug,banner};
+const util = require("util");
+const config = require("../config");
+
+const levels = { silent: 0, error: 1, warn: 2, info: 3, debug: 4 };
+const currentLevel = levels[config.logLevel] ?? 3;
+
+function formatArgs(args) {
+  return args.map((arg) => {
+    if (typeof arg === "string") return arg;
+    return util.inspect(arg, { depth: 4, colors: false });
+  }).join(" ");
+}
+
+function write(level, ...args) {
+  if ((levels[level] ?? 0) > currentLevel) return;
+  const ts = new Date().toISOString();
+  const message = `[${ts}] [${String(level).toUpperCase()}] ${formatArgs(args)}`;
+
+  if (level === "error") console.error(message);
+  else if (level === "warn") console.warn(message);
+  else console.log(message);
+}
+
+function banner(cfg) {
+  write("info", `Starting ${cfg.name || "Mateo-XMD"} v${cfg.version || "1.0.0"}`);
+}
+
+module.exports = {
+  banner,
+  log: (...args) => write("info", ...args),
+  error: (...args) => write("error", ...args),
+  warn: (...args) => write("warn", ...args),
+  debug: (...args) => write("debug", ...args),
+};
